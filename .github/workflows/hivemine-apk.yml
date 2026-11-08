@@ -149,11 +149,14 @@ jobs:
             fi
           fi
 
-          # Add autoFarm field to Config.java if missing
+          # Ensure Config.java has public boolean fields for autoFarm and save method
           CONFIG_FILE="app/src/main/java/com/hiveminemobile/Config.java"
           if [ -f "$CONFIG_FILE" ]; then
             if ! grep -q "public boolean autoFarm;" "$CONFIG_FILE"; then
               sed -i '/public class Config {/a \    public boolean autoFarm = false;' "$CONFIG_FILE"
+            fi
+            if ! grep -q "public void save(" "$CONFIG_FILE"; then
+              sed -i '/}/i \    public void save() {}' "$CONFIG_FILE"
             fi
           fi
 
