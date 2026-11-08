@@ -18,25 +18,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract HiveMine project
+      - name: Find HiveMine ZIP
         shell: bash
         run: |
-          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" -print -quit)
+          ZIP=$(find "$GITHUB_WORKSPACE" \
+            -maxdepth 1 \
+            -type f \
+            -name "*.zip" \
+            -print \
+            -quit)
 
           if [ -z "$ZIP" ]; then
-            echo "::error::HiveMine ZIP was not found."
+            echo "::error::No HiveMine ZIP found in repository root."
             exit 1
           fi
 
-          echo "Extracting: $ZIP"
+          echo "ZIP found:"
+          echo "$ZIP"
 
-          mkdir -p hivemine-project
-          unzip -q "$ZIP" -d hivemine-project
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
-          echo "Extracted files:"
-          find hivemine-project -maxdepth 3 -type f | sort | head -100
+      - name: Extract HiveMine project
+        shell: bash
+        run: |
+          rm -rf "$GITHUB_WORKSPACE/hivemine-project"
+          mkdir -p "$GITHUB_WORKSPACE/hivemine-project"
 
-      - name: Locate Gradle project
+          unzip -q "$ZIP" -d "$GITHUB_WORKSPACE/hivemine-project"
+
+          echo "Extracted project:"
+          find "$GITHUB_WORKSPACE/hivemine-project" \
+            -maxdepth 4 \
+            -type f | sort | head -200
+
+      - name: Locate Gradle wrapper
         shell: bash
         run: |
           GRADLEW=$(find "$GITHUB_WORKSPACE/hivemine-project" \
@@ -46,16 +61,17 @@ jobs:
             -quit)
 
           if [ -z "$GRADLEW" ]; then
-            echo "::error::gradlew was not found after extracting the ZIP."
-            echo "ZIP contents:"
-            find "$GITHUB_WORKSPACE/hivemine-project" -maxdepth 5 -type f | sort
+            echo "::error::gradlew was not found inside the ZIP."
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$GRADLEW")
 
-          echo "Gradle wrapper: $GRADLEW"
-          echo "Project directory: $PROJECT_DIR"
+          echo "Gradle wrapper:"
+          echo "$GRADLEW"
+
+          echo "Project directory:"
+          echo "$PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
@@ -65,10 +81,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
-      - name: Install Android SDK 35
+      - name: Install Android SDK packages
         shell: bash
         run: |
           sdkmanager \
@@ -76,10 +94,20 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
+      - name: Verify Android SDK
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+
+          sdkmanager --list_installed | grep -E \
+            "platform-tools|platforms;android-35|build-tools;35.0.0" || true
+
       - name: Make Gradle executable
         run: chmod +x "$PROJECT_DIR/gradlew"
 
       - name: Show Gradle version
+        shell: bash
         run: |
           cd "$PROJECT_DIR"
           ./gradlew --version
@@ -96,13 +124,13 @@ jobs:
       - name: Find APK
         shell: bash
         run: |
-          echo "Built APKs:"
+          echo "APK files:"
           find "$PROJECT_DIR" \
             -type f \
             -path "*/build/outputs/apk/debug/*.apk" \
             -print
 
-      - name: Upload APK
+      - name: Upload HiveMine APK
         uses: actions/upload-artifact@v4
         with:
           name: HiveMine-Mobile-V1.0-debug-APK
