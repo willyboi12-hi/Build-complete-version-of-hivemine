@@ -128,11 +128,39 @@ jobs:
           cd "$PROJECT_DIR"
           ./gradlew --version
 
+      - name: Patch source compilation errors
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR"
+          
+          # Fix missing TextView import in MainActivity.java
+          MAIN_ACTIVITY="app/src/main/java/com/hiveminemobile/MainActivity.java"
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            if ! grep -q "import android.widget.TextView;" "$MAIN_ACTIVITY"; then
+              sed -i '/import android.widget.Button;/a import android.widget.TextView;' "$MAIN_ACTIVITY"
+            fi
+          fi
+
+          # Fix missing ObservationFreshness import in MacroAccessibilityService.java
+          MACRO_SERVICE="app/src/main/java/com/hiveminemobile/MacroAccessibilityService.java"
+          if [ -f "$MACRO_SERVICE" ]; then
+            if ! grep -q "import com.hiveminemobile.ai.control.ObservationFreshness;" "$MACRO_SERVICE"; then
+              sed -i '/package com.hiveminemobile;/a import com.hiveminemobile.ai.control.ObservationFreshness;' "$MACRO_SERVICE"
+            fi
+          fi
+
+          # Add autoFarm field to Config.java if missing
+          CONFIG_FILE="app/src/main/java/com/hiveminemobile/Config.java"
+          if [ -f "$CONFIG_FILE" ]; then
+            if ! grep -q "public boolean autoFarm;" "$CONFIG_FILE"; then
+              sed -i '/public class Config {/a \    public boolean autoFarm = false;' "$CONFIG_FILE"
+            fi
+          fi
+
       - name: Build HiveMine debug APK
         shell: bash
         run: |
           cd "$PROJECT_DIR"
-          # Ensure both environment variables point to the exact same path
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           ./gradlew :app:assembleDebug \
             --no-daemon \
