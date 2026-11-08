@@ -81,14 +81,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Accept Android SDK licenses
+      - name: Install Android SDK using commandline-tools
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses and install packages
         shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
           sdkmanager \
             "platform-tools" \
             "platforms;android-35" \
@@ -99,7 +98,6 @@ jobs:
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-
           sdkmanager --list_installed | grep -E \
             "platform-tools|platforms;android-35|build-tools;35.0.0" || true
 
@@ -116,7 +114,6 @@ jobs:
         shell: bash
         run: |
           cd "$PROJECT_DIR"
-
           ./gradlew :app:assembleDebug \
             --no-daemon \
             --stacktrace
