@@ -133,7 +133,7 @@ jobs:
         run: |
           cd "$PROJECT_DIR"
           
-          # Fix missing TextView import in MainActivity.java
+          # 1. Fix missing TextView import in MainActivity.java
           MAIN_ACTIVITY="app/src/main/java/com/hiveminemobile/MainActivity.java"
           if [ -f "$MAIN_ACTIVITY" ]; then
             if ! grep -q "import android.widget.TextView;" "$MAIN_ACTIVITY"; then
@@ -141,7 +141,7 @@ jobs:
             fi
           fi
 
-          # Fix missing ObservationFreshness import in MacroAccessibilityService.java
+          # 2. Fix missing ObservationFreshness import in MacroAccessibilityService.java
           MACRO_SERVICE="app/src/main/java/com/hiveminemobile/MacroAccessibilityService.java"
           if [ -f "$MACRO_SERVICE" ]; then
             if ! grep -q "import com.hiveminemobile.ai.control.ObservationFreshness;" "$MACRO_SERVICE"; then
@@ -149,14 +149,15 @@ jobs:
             fi
           fi
 
-          # Ensure Config.java has public boolean fields for autoFarm and save method
+          # 3. Cleanly add autoFarm field to Config.java right inside the class declaration
           CONFIG_FILE="app/src/main/java/com/hiveminemobile/Config.java"
           if [ -f "$CONFIG_FILE" ]; then
+            # Clean any previously broken mock methods if they exist from past runs
+            sed -i '/public void save() {}/d' "$CONFIG_FILE"
+            
             if ! grep -q "public boolean autoFarm;" "$CONFIG_FILE"; then
-              sed -i '/public class Config {/a \    public boolean autoFarm = false;' "$CONFIG_FILE"
-            fi
-            if ! grep -q "public void save(" "$CONFIG_FILE"; then
-              sed -i '/}/i \    public void save() {}' "$CONFIG_FILE"
+              # Insert autoFarm right after the class declaration line
+              sed -i '/class Config {/a \    public boolean autoFarm = false;' "$CONFIG_FILE"
             fi
           fi
 
